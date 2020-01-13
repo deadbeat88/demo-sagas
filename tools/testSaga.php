@@ -10,7 +10,7 @@ include_once __DIR__ . '/../vendor/autoload.php';
 
 $publisher = new \ToolsPublisher(__DIR__ . '/../.env');
 
-for ($i=0; $i < 10; $i++)
+for ($i=0; $i < 50; $i++)
 {
     $command = new \Demo\Test\Command\StartTestSaga(
         \ServiceBus\Common\uuid()

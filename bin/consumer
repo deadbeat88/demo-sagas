@@ -1,0 +1,93 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types = 1);
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use Amp\Loop;
+use Demo\App\DependencyInjection\ApplicationExtension;
+use Demo\App\DependencyInjection\SchemaCompilerPass;
+use Monolog\Logger;
+use Psr\Log\LogLevel;
+use ServiceBus\Application\Bootstrap;
+use ServiceBus\Application\DependencyInjection;
+use ServiceBus\Application\ServiceBusKernel;
+use ServiceBus\Sagas\Module\SagaModule;
+use ServiceBus\Sagas\Module\SqlSchemaCreator;
+use ServiceBus\Storage\Common\DatabaseAdapter;
+use ServiceBus\Storage\Module\SqlStorageModule;
+use ServiceBus\Transport\Amqp\AmqpExchange;
+use ServiceBus\Transport\Amqp\AmqpQueue;
+use ServiceBus\Transport\Common\QueueBind;
+use ServiceBus\Transport\Module\PhpInnacleTransportModule;
+
+\set_time_limit(0);
+
+$bootstrap = Bootstrap::withDotEnv(__DIR__ . '/../.env');
+
+$transportModule = new PhpInnacleTransportModule(
+    (string)\getenv('TRANSPORT_CONNECTION_DSN'),
+    (string)\getenv('TRANSPORT_TOPIC'),
+    (string)\getenv('TRANSPORT_ROUTING_KEY')
+);
+$transportModule->configureQos(null, 200, null);
+
+/** @noinspection PhpUnhandledExceptionInspection */
+$container = $bootstrap
+    ->useCustomCacheDirectory(__DIR__ . '/../var/cache')
+    ->applyModules(
+        $transportModule,
+        SqlStorageModule::postgreSQL((string)\getenv('DATABASE_CONNECTION_DSN')),
+        SagaModule::withSqlStorage(DatabaseAdapter::class)->enableAutoImportSagas([__DIR__ . '/../src'])
+    )
+    ->addExtensions(new ApplicationExtension())
+    ->addCompilerPasses(
+        new SchemaCompilerPass(),
+        new DependencyInjection\Compiler\Logger\LoggerCompilerPass(),
+        new DependencyInjection\Compiler\Logger\StdOutLoggerCompilerPass(
+            Logger::toMonologLevel(\getenv('LOG_LEVEL') ?: LogLevel::DEBUG)
+        )
+    )
+    ->boot();
+
+$kernel = new ServiceBusKernel($container);
+
+$kernel
+    ->useDefaultStopSignalHandler(5)
+    ->enableGarbageCleaning();
+
+/** @var SqlSchemaCreator $schemaCreator */
+$schemaCreator = $container->get(SqlSchemaCreator::class);
+
+try {
+    Loop::run(
+        static function () use ($kernel, $schemaCreator): \Generator
+        {
+            $mainExchange = AmqpExchange::direct((string)\getenv('TRANSPORT_TOPIC'), true);
+            $mainQueue    = AmqpQueue::default((string)\getenv('TRANSPORT_QUEUE'), true);
+
+            yield $kernel->createQueue(
+                $mainQueue,
+                new QueueBind($mainExchange, (string)\getenv('TRANSPORT_ROUTING_KEY'))
+            );
+
+            yield $schemaCreator->import();
+            yield $kernel->run($mainQueue);
+        }
+    );
+} catch (\Throwable $throwable) {
+    $error = '';
+
+    do {
+        $error .= \sprintf(
+            "%s: ('%s' at %s:%s); \n",
+            \get_class($throwable),
+            $throwable->getMessage(),
+            $throwable->getFile(),
+            $throwable->getLine()
+        );
+    } while ($throwable = $throwable->getPrevious());
+
+    echo $error;
+}

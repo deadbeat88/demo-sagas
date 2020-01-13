@@ -2423,16 +2423,16 @@
         },
         {
             "name": "php-service-bus/module-sagas",
-            "version": "v4.0.7",
+            "version": "v4.0.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-service-bus/module-sagas.git",
-                "reference": "8d3ac8f6468d6a582eb5bd9ae4da1bfdae610b5d"
+                "reference": "b8d2623aacd5dd68c076c3b75c2c7ff86bf0184c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-service-bus/module-sagas/zipball/8d3ac8f6468d6a582eb5bd9ae4da1bfdae610b5d",
-                "reference": "8d3ac8f6468d6a582eb5bd9ae4da1bfdae610b5d",
+                "url": "https://api.github.com/repos/php-service-bus/module-sagas/zipball/b8d2623aacd5dd68c076c3b75c2c7ff86bf0184c",
+                "reference": "b8d2623aacd5dd68c076c3b75c2c7ff86bf0184c",
                 "shasum": ""
             },
             "require": {
@@ -2475,7 +2475,7 @@
                 "messaging",
                 "sagas"
             ],
-            "time": "2020-01-12T20:43:35+00:00"
+            "time": "2020-01-13T14:03:35+00:00"
         },
         {
             "name": "php-service-bus/module-storage-sql",
