@@ -1,0 +1,33 @@
+{
+  "name": "demo/test",
+  "description": "Test mutexes for sagas",
+  "license": "MIT",
+  "type": "project",
+  "authors": [
+    {
+      "name": "Stepan Zolotarev",
+      "role": "Developer"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Demo\\": "src",
+      "Demo\\App\\": "app"
+    },
+    "files": [
+      "tools/ToolsPublisher.php"
+    ]
+  },
+  "require": {
+    "php": ">=7.3",
+    "php-service-bus/service-bus": "^4.0",
+    "php-service-bus/module-phpinnacle-transport": "^4.0",
+    "php-service-bus/module-sagas": "^4.0",
+    "php-service-bus/module-storage-sql": "^4.0"
+  },
+  "config": {
+    "optimize-autoloader": true
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}

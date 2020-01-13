@@ -1,0 +1,50 @@
+version: '3.7'
+
+services:
+  rabbitmq:
+    build:
+      context: docker/rabbitmq
+    container_name: demo-rabbitmq
+    restart: always
+    ports:
+      - 5680:5672
+      - 15680:15672
+    environment:
+      RABBITMQ_VM_MEMORY_HIGH_WATERMARK: 512M
+      RABBITMQ_ERLANG_COOKIE: f6fAjy5yes
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+
+  db:
+    image: postgres:12
+    shm_size: 1500M
+    container_name: demo-db
+    restart: always
+    environment:
+      PGDATA: /var/lib/postgresql/data/
+      POSTGRES_DB: demo
+      POSTGRES_PASSWORD: 123456789
+      POSTGRES_USER: demo
+    volumes:
+      - ./docker/db/config/postgresql.conf:/etc/postgresql/postgresql.conf
+    ports:
+      - 5440:5432
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+
+  app:
+    build:
+      context: docker/app
+    container_name: demo-app
+    restart: always
+    volumes:
+      - ./:/var/www
+    working_dir: /var/www
+    depends_on:
+      - db
+      - rabbitmq
+    links:
+      - db:db
+      - rabbitmq:rabbitmq
+    env_file:
+      - .env
+    command: ["/tools/wait-for-it.sh", "--timeout=10", "rabbitmq:5672", "--", "/tools/entrypoint.sh"]
